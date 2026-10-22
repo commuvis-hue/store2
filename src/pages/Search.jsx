@@ -3,7 +3,7 @@ import { useStore } from '../store/Store';
 import { useRouter } from '../store/router';
 import { ProductCard, Empty } from '../components/UI';
 import { IBack, IClose } from '../components/Icons';
-import { CATEGORIES, POPULAR_SEARCHES } from '../data/mock';
+import { CATEGORIES, POPULAR_SEARCHES, ROMAN_MAP } from '../data/mock';
 
 const SORTS = { recent: 'नयाँ पहिले', low: 'सस्तो पहिले', high: 'महँगो पहिले', popular: 'लोकप्रिय' };
 
@@ -28,8 +28,11 @@ export default function Search() {
 
   const results = useMemo(() => {
     if (!done) return [];
-    const t = done.toLowerCase();
-    let r = state.products.filter((p) => !state.hidden.includes(p.id) && (p.title.toLowerCase().includes(t) || p.desc.toLowerCase().includes(t) || (t === 'निःशुल्क' && p.nanum)));
+    const t = done.toLowerCase().trim();
+    // 로마자 네팔어·영어 → 데바나가리 키워드도 함께 검색 (예: scooter → स्कुटर)
+    const terms = [t, ROMAN_MAP[t], ...t.split(/\s+/).map((w) => ROMAN_MAP[w])].filter(Boolean).map((x) => x.toLowerCase());
+    const hit = (p) => terms.some((x) => p.title.toLowerCase().includes(x) || p.desc.toLowerCase().includes(x) || (x === 'निःशुल्क' && p.nanum) || (x === 'विदेश' && p.abroad));
+    let r = state.products.filter((p) => !state.hidden.includes(p.id) && hit(p));
     if (cat) r = r.filter((p) => p.category === cat);
     if (onlySelling) r = r.filter((p) => p.status !== 'sold');
     if (min) r = r.filter((p) => p.price >= +min);
@@ -54,6 +57,7 @@ export default function Search() {
             {state.recentSearches.length > 0 && <button className="text-btn" onClick={() => dispatch({ type: 'CLEAR_SEARCHES' })}>सबै मेटाउनुहोस्</button>}</div>
           {state.recentSearches.length === 0 ? <p className="meta">हालै केही खोज्नुभएको छैन।</p> :
             <div className="tag-wrap">{state.recentSearches.map((s) => <button key={s} className="tag" onClick={() => submit(s)}>{s}</button>)}</div>}
+          <p className="meta mt">रोमन अक्षरमा पनि खोज्न सकिन्छ: <em>scooter, saree, momo, kotha</em></p>
           <h2 className="section-title mt">धेरै खोजिएका</h2>
           <div className="tag-wrap">{POPULAR_SEARCHES.map((s) => <button key={s} className="tag" onClick={() => submit(s)}>{s}</button>)}</div>
         </section>

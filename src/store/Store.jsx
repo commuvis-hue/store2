@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import { USERS, PRODUCTS, POSTS, INITIAL_CHATS, INITIAL_NOTIFICATIONS, AUTO_REPLIES, OFFER_REPLIES } from '../data/mock';
 
-const KEY = 'chhimeki-bazar-np-v1';
+const KEY = 'chhimeki-bazar-np-v2';
 const uid = (p) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 const initial = () => ({
@@ -21,6 +21,16 @@ const initial = () => ({
     { id: 'r1', fromId: 'u4', toId: 'me', text: 'एकदम राम्रो कारोबार भयो, धन्यवाद! 🙏', tags: ['विनम्र र राम्रो व्यवहार'], at: Date.now() - 5 * 86400000 },
   ],
   recentSearches: [],
+  // v2 (사업기획서 반영)
+  auth: { loggedIn: false, phone: '' },
+  settings: { lite: false },
+  business: { active: false, shopName: '', since: null },
+  payments: [],
+  reports: [],
+  waitlist: [],
+  coupons: [],
+  myAds: [],
+  freeBumps: {},
 });
 
 function load() {
@@ -80,6 +90,19 @@ function reducer(s, a) {
       if (t) users[a.review.toId] = { ...t, temp: Math.min(99, +(t.temp + 0.1 * (a.review.tags.length || 1)).toFixed(1)) };
       return { ...s, users, reviews: [a.review, ...s.reviews] };
     }
+    // ── v2 ──
+    case 'LOGIN': return { ...s, auth: { loggedIn: true, phone: a.phone }, me: { ...s.me, ...(a.patch || {}) } };
+    case 'LOGOUT': return { ...s, auth: { loggedIn: false, phone: '' }, me: { ...s.me, verified: false } };
+    case 'SETTINGS': return { ...s, settings: { ...s.settings, ...a.patch } };
+    case 'BUSINESS': return { ...s, business: { ...s.business, ...a.patch } };
+    case 'PAY': return { ...s, payments: [a.payment, ...s.payments] };
+    case 'REPORT': return { ...s, reports: [{ status: 'open', at: Date.now(), ...a.report }, ...s.reports] };
+    case 'RESOLVE_REPORT': return { ...s, reports: s.reports.map((r) => (r.id === a.id ? { ...r, status: a.status, resolvedAt: Date.now() } : r)) };
+    case 'WAITLIST': return s.waitlist.includes(a.region) ? s : { ...s, waitlist: [...s.waitlist, a.region] };
+    case 'CLAIM_COUPON': return s.coupons.includes(a.id) ? s : { ...s, coupons: [...s.coupons, a.id] };
+    case 'ADD_AD': return { ...s, myAds: [a.ad, ...s.myAds] };
+    case 'UPDATE_AD': return { ...s, myAds: s.myAds.map((x) => (x.id === a.id ? { ...x, ...a.patch } : x)) };
+    case 'FREE_BUMP': return { ...s, freeBumps: { ...s.freeBumps, [a.id]: a.day } };
     default: return s;
   }
 }
@@ -105,6 +128,17 @@ export function StoreProvider({ children }) {
     isLiked: (id) => state.likes.includes(id),
     likeCount: (p) => p.baseLikes + (state.likes.includes(p.id) ? 1 : 0),
 
+    loggedIn: state.auth.loggedIn,
+    // 결제 기록 (실서비스: eSewa/Khalti/Fonepay 게이트웨이 콜백에서 생성)
+    pay(item, amount, method, ref) {
+      const payment = { id: uid('pay'), item, amount, method, ref, at: Date.now(), status: 'paid' };
+      dispatch({ type: 'PAY', payment });
+      return payment;
+    },
+    report(kind, targetId, reason) {
+      dispatch({ type: 'REPORT', report: { id: uid('rp'), kind, targetId, reason, by: 'me' } });
+    },
+
     addProduct(data) {
       const product = { id: uid('p'), sellerId: 'me', region: state.me.region, createdAt: Date.now(), status: 'selling', views: 0, baseLikes: 0, chatCount: 0, ...data };
       dispatch({ type: 'ADD_PRODUCT', product });
@@ -123,15 +157,16 @@ export function StoreProvider({ children }) {
     },
 
     send(chatId, text, extra = {}) {
-      const chat = state.chats.find((c) => c.id === chatId);
-      dispatch({ type: 'SEND', chatId, message: { id: uid('m'), from: 'me', text, at: Date.now(), ...extra } });
-      if (!chat || state.blocked.includes(chat.partnerId)) return;
+      const { partnerId: pid, ...rest } = extra;
+      const partnerId = state.chats.find((c) => c.id === chatId)?.partnerId || pid;
+      dispatch({ type: 'SEND', chatId, message: { id: uid('m'), from: 'me', text, at: Date.now(), ...rest } });
+      if (!partnerId || state.blocked.includes(partnerId)) return;
       // बिक्रेताको स्वचालित जवाफ (डेमो)
       timers.current.push(setTimeout(() => {
         const reply = extra.kind === 'offer'
           ? OFFER_REPLIES[Math.random() > 0.5 ? 0 : 1]
           : AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)];
-        dispatch({ type: 'SEND', chatId, message: { id: uid('m'), from: chat.partnerId, text: reply, at: Date.now() } });
+        dispatch({ type: 'SEND', chatId, message: { id: uid('m'), from: partnerId, text: reply, at: Date.now() } });
       }, 1400 + Math.random() * 1200));
     },
   };

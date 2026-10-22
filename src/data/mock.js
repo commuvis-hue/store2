@@ -52,21 +52,21 @@ export const PRODUCTS = [
   P('p1', { title: 'iPhone 15 Pro 256GB नेचुरल टाइटेनियम', price: 145000, category: 'digital', sellerId: 'u1', region: 'ठमेल', createdAt: now - 12 * 60000, fb: FB.phone,
     images: [u('1511707171634-5f897ff02aa9'), u('1512499617640-c74ae3a79d37')],
     desc: 'गत वर्ष दशैंमा किनेको। सधैं कभर र स्क्रिन गार्ड लगाएर चलाएको, कतै कोरिएको छैन।\nब्याट्री हेल्थ ९३%\nबक्स, चार्जर, बिल सबै छ।\nठमेल चोक नजिक भेटेर लिन सकिन्छ।' }),
-  P('p2', { title: 'Samsung Galaxy S24 Ultra 12/256', price: 128000, category: 'digital', sellerId: 'u3', region: 'पाटन', createdAt: now - 2 * H, fb: FB.phone,
+  P('p2', { abroad: true, title: 'Samsung Galaxy S24 Ultra 12/256', price: 128000, category: 'digital', sellerId: 'u3', region: 'पाटन', createdAt: now - 2 * H, fb: FB.phone,
     images: [u('1610945415295-d9bbf067e59c'), u('1598327105666-5b89351aff97')],
     desc: 'अफिसियल सेट, वारेन्टी ४ महिना बाँकी। S Pen सहित।\nविदेश जाँदै भएकाले बेच्दैछु।' }),
-  P('p3', { title: 'Honda Dio स्कुटर २०२२ (बागमती प्रदेश नम्बर)', price: 185000, category: 'vehicles', sellerId: 'u5', region: 'नयाँ बानेश्वर', createdAt: now - 40 * 60000, fb: FB.bike,
+  P('p3', { premium: true, highlightUntil: now + 2 * D, title: 'Honda Dio स्कुटर २०२२ (बागमती प्रदेश नम्बर)', price: 185000, category: 'vehicles', sellerId: 'u5', region: 'नयाँ बानेश्वर', createdAt: now - 40 * 60000, fb: FB.bike,
     images: [u('1558981806-ec527fa84c39'), u('1449426468159-d96dbf08f19f')],
     desc: '१२,००० कि.मि. मात्र चलेको। ब्लुबुक, बीमा अपडेट छ।\nनियमित सर्भिसिङ गरेको। नामसारी गर्न सहयोग गर्छु।' }),
-  P('p4', { title: 'Royal Enfield Classic 350 (२०२१)', price: 520000, category: 'vehicles', sellerId: 'u2', region: 'लेकसाइड, पोखरा', createdAt: now - 5 * H, status: 'reserved', fb: FB.bike,
+  P('p4', { premium: true, title: 'Royal Enfield Classic 350 (२०२१)', price: 520000, category: 'vehicles', sellerId: 'u2', region: 'लेकसाइड, पोखरा', createdAt: now - 5 * H, status: 'reserved', fb: FB.bike,
     images: [u('1568772585407-9361f9bf3a87'), u('1558981403-c5f9899a28bc')],
     desc: 'मुस्ताङ ट्रिप दुई पटक गरेको, इन्जिन एकदम राम्रो।\nक्र्यास गार्ड र लगेज र्‍याक थपिएको।' }),
   P('p5', { title: 'इलेक्ट्रिक स्कुटर — एक चार्जमा ११० कि.मि.', price: 210000, category: 'vehicles', sellerId: 'u7', region: 'कोटेश्वर', createdAt: now - 3 * H, fb: FB.bike,
     images: [u('1593941707882-a5bba14938c7')],
     desc: 'पेट्रोल खर्च बचाउन किनेको थिएँ, अब कार किनेकाले बेच्दैछु।\nहोम चार्जर सहित। ब्याट्री वारेन्टी २०२८ सम्म।' }),
-  P('p6', { title: 'MacBook Air M2 13 इन्च मिडनाइट', price: 118000, category: 'digital', sellerId: 'u3', region: 'पाटन', createdAt: now - 9 * H, fb: FB.laptop,
+  P('p6', { abroad: true, title: 'MacBook Air M2 13 इन्च मिडनाइट', price: 118000, category: 'digital', sellerId: 'u3', region: 'पाटन', createdAt: now - 9 * H, fb: FB.laptop,
     images: [u('1517336714731-489689fd1ca8'), u('1496181133206-80ce9b88a853')],
-    desc: 'साइकल काउन्ट १२०। फ्रिल्यान्सिङ कामका लागि प्रयोग गरेको। चार्जर र स्लिभ सहित।' }),
+    desc: 'साइकल काउन्ट १२०। अर्को महिना अस्ट्रेलिया पढ्न जाँदै भएकाले बेच्दैछु। चार्जर र स्लिभ सहित।' }),
   P('p7', { title: 'हातले बनाएको सिंगिङ बाउल (१२ से.मि.)', price: 4500, category: 'handicraft', sellerId: 'u6', region: 'बौद्ध', createdAt: now - 25 * 60000, fb: FB.music,
     images: [ud('y0wkjVGUT9s'), ud('d-xbK1qfCVY')],
     desc: 'बौद्धका कारिगरले बनाएको सात धातुको बाउल। काठको स्टिक र कुसन सहित।\nध्यान र योगका लागि उत्तम।' }),
@@ -185,3 +185,60 @@ export const MANNER_TAGS = ['समयमै आउनुहुन्छ', 'व�
 export const POPULAR_SEARCHES = ['स्कुटर', 'iPhone', 'सिंगिङ बाउल', 'ट्रेकिङ', 'साडी', 'निःशुल्क'];
 export const REPORT_REASONS = ['बेच्न निषेध गरिएको सामान', 'नक्कली पोस्ट', 'व्यापारी जस्तो देखिन्छ', 'ठगी जस्तो देखिन्छ', 'अपमानजनक भाषा'];
 export const SAMPLE_PHOTOS = ['1449426468159-d96dbf08f19f', '1553062407-98eeb64c6a62', '1510915361894-db8b60106cb1', '1531415074968-036ba1b575da', '1509391366360-2e959784a276', '1551028719-00167b16eac5'].map((id) => u(id));
+
+// ───────── 사업기획서 반영 (v2) ─────────
+
+// 단계별 출시: 1단계는 카트만두 밸리 핵심 동네만 공개, 나머지는 대기자 명단(관문 G2 통과 후 오픈)
+export const REGION_INFO = {
+  'ठमेल': { city: 'काठमाडौं', open: true },
+  'नयाँ बानेश्वर': { city: 'काठमाडौं', open: true },
+  'पाटन': { city: 'ललितपुर', open: true },
+  'कोटेश्वर': { city: 'काठमाडौं', open: true },
+  'झम्सिखेल': { city: 'ललितपुर', open: false },
+  'बौद्ध': { city: 'काठमाडौं', open: false },
+  'भक्तपुर': { city: 'भक्तपुर', open: false },
+  'लेकसाइड, पोखरा': { city: 'पोखरा', open: false },
+};
+
+// 금지 물품 자동 필터
+export const PROHIBITED = ['बन्दुक', 'पेस्तोल', 'हतियार', 'गोली', 'औषधि', 'ट्याब्लेट', 'गाँजा', 'चरेस', 'लागूपदार्थ', 'बाघको छाला', 'गैंडाको सिङ', 'हात्तीको दाँत', 'कस्तुरी', 'नक्कली नोट',
+  'gun', 'pistol', 'weapon', 'ganja', 'charas', 'drugs', 'tiger skin', 'rhino horn', 'ivory', 'musk'];
+
+// 로마자 네팔어·영어 검색 → 데바나가리 키워드
+export const ROMAN_MAP = {
+  scooter: 'स्कुटर', scooty: 'स्कुटर', bike: 'बाइक', motorbike: 'बाइक', bullet: 'Royal Enfield', cycle: 'साइकल', saikal: 'साइकल',
+  mobile: 'मोबाइल', phone: 'iPhone', laptop: 'MacBook', tv: 'टिभी', solar: 'सोलार', inverter: 'इन्भर्टर',
+  saree: 'साडी', sari: 'साडी', sadi: 'साडी', pashmina: 'पश्मिना', shawl: 'सल', jacket: 'ज्याकेट', juta: 'बुट', shoes: 'बुट',
+  momo: 'मोमो', bowl: 'बाउल', singing: 'सिंगिङ', trekking: 'ट्रेकिङ', tent: 'टेन्ट', bag: 'ब्याकप्याक', cricket: 'क्रिकेट', football: 'फुटबल',
+  guitar: 'गितार', sofa: 'सोफा', kitab: 'किताब', book: 'किताब', loksewa: 'लोक सेवा', free: 'निःशुल्क', nishulka: 'निःशुल्क',
+  ghar: 'घर', kotha: 'कोठा', bideshi: 'विदेश', bidesh: 'विदेश',
+};
+
+// 유료 상품 가격 (रू)
+export const PRICES = { bump: 50, highlight: 100, premium: 500, business: 999, adMonthly: 1500 };
+export const HIGHLIGHT_DAYS = 3;
+export const PREMIUM_CATEGORIES = ['vehicles'];
+
+export const PAY_METHODS = [
+  { id: 'esewa', name: 'eSewa', color: '#60BB46' },
+  { id: 'khalti', name: 'Khalti', color: '#5C2D91' },
+  { id: 'fonepay', name: 'Fonepay QR', color: '#C8102E' },
+];
+
+// 동네가게 광고 (피드 안 'प्रायोजित' 카드)
+export const AD_SLOTS = [
+  { id: 'ad1', storeId: 's1', headline: 'बिहानको पहिलो कफी — अमेरिकानोमा रू ५० छुट' },
+  { id: 'ad2', storeId: 's2', headline: 'दशैं विशेष: झोल मोमो २ प्लेटमा १ प्लेट निःशुल्क' },
+  { id: 'ad3', storeId: 's3', headline: 'परिवारसँग थकाली खाना — १०% छुट' },
+];
+
+// 전자상거래법상 표시 의무 정보 (등록 후 실제 번호로 교체)
+export const COMPANY = {
+  name: 'छिमेकी बजार प्रा. लि.',
+  address: 'नयाँ बानेश्वर, काठमाडौं, नेपाल',
+  reg: 'कम्पनी दर्ता नं. — (दर्तापछि भर्नुहोस्)',
+  pan: 'PAN नं. — (दर्तापछि भर्नुहोस्)',
+  ecom: 'विद्युतीय व्यापार सूचीकरण नं. — (दर्तापछि भर्नुहोस्)',
+  email: 'gunaso@chhimeki.example',
+  phone: '+977-1-XXXXXXX',
+};

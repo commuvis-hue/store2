@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useStore } from '../store/Store';
 import { Link, useRouter } from '../store/router';
-import { REGIONS, MANNER_TAGS } from '../data/mock';
+import { REGIONS, MANNER_TAGS, REGION_INFO } from '../data/mock';
+import { CompanyInfo } from './Legal';
 import { Avatar, MannerTemp, TopBar, ProductCard, Empty, Sheet } from '../components/UI';
 import { IChevron, IReceipt, IBag, IHeart, ITag, IMap, IShield, ISettings, IBell, IStar } from '../components/Icons';
 import { ago, STATUS, ne } from '../utils';
@@ -18,6 +19,13 @@ export default function My() {
   return (
     <div className="page">
       <header className="topbar"><h1 className="topbar-title left">मेरो पेज</h1><div className="topbar-right"><Link to="/my/settings" className="icon-btn" aria-label="सेटिङ"><ISettings /></Link></div></header>
+      {!state.auth.loggedIn && (
+        <div className="notice">
+          <strong>मोबाइल नम्बरबाट लगइन गर्नुहोस्</strong>
+          <span className="meta">लगइन गरेपछि सामान बेच्न, च्याट गर्न र टोल प्रमाणीकरण गर्न सकिन्छ।</span>
+          <Link to="/login?next=/my" className="btn sm">लगइन / दर्ता</Link>
+        </div>
+      )}
       <Link to="/users/me" className="profile-card">
         <Avatar user={me} size={60} />
         <div className="profile-name"><strong>{me.nickname}</strong><span className="meta">{me.region} · {state.me.verified ? 'टोल प्रमाणित ✓' : 'टोल प्रमाणीकरण बाँकी'}</span></div>
@@ -34,6 +42,15 @@ export default function My() {
         <li><Link to="/my/blocked"><IShield />ब्लक र लुकाइएका पोस्ट</Link></li>
         <li><Link to="/my/settings"><ISettings />प्रोफाइल र सेटिङ</Link></li>
       </ul>
+      <ul className="menu-list">
+        <li><Link to="/business">🏪 व्यापार केन्द्र <span className="meta">{state.business.active ? 'सक्रिय' : 'पसल विज्ञापन'}</span></Link></li>
+        <li><Link to="/help">💬 सहायता र गुनासो</Link></li>
+        <li><Link to="/legal/rules">📜 समुदायका नियम</Link></li>
+        <li><Link to="/legal/terms">📄 सेवाका सर्त</Link></li>
+        <li><Link to="/legal/privacy">🔒 गोपनीयता नीति</Link></li>
+        <li><Link to="/admin">📊 सञ्चालन ड्यासबोर्ड <span className="meta">डेमो</span></Link></li>
+      </ul>
+      <CompanyInfo />
     </div>
   );
 }
@@ -113,7 +130,10 @@ export function RegionSettings() {
       dispatch({ type: 'ME', patch: { regions: [...regions, r] } });
     }
   };
+  const { navigate } = useRouter();
   const verify = () => {
+    if (!state.auth.loggedIn) { showToast('पहिले मोबाइल नम्बरबाट लगइन गर्नुहोस्'); navigate('/login?next=/my/region'); return; }
+    if (REGION_INFO[state.me.region]?.open === false) { showToast(`${state.me.region} मा सेवा अझै सुरु भएको छैन`); return; }
     setChecking(true);
     const done = () => { setChecking(false); dispatch({ type: 'ME', patch: { verified: true } }); showToast(`${state.me.region} टोल प्रमाणीकरण सफल भयो`); };
     if (navigator.geolocation) navigator.geolocation.getCurrentPosition(done, done, { timeout: 5000 });
@@ -123,7 +143,8 @@ export function RegionSettings() {
     <div className="page"><TopBar back title="मेरो टोल" />
       <section className="pad">
         <h2 className="section-title">टोल छान्नुहोस् <span className="meta">बढीमा २ वटा</span></h2>
-        <div className="tag-wrap">{REGIONS.map((r) => <button key={r} className={`tag ${regions.includes(r) ? 'is-on' : ''}`} onClick={() => toggle(r)}>{r}</button>)}</div>
+        <div className="tag-wrap">{REGIONS.map((r) => <button key={r} className={`tag ${regions.includes(r) ? 'is-on' : ''}`} onClick={() => toggle(r)}>{r}{REGION_INFO[r]?.open === false && <small className="soon">छिट्टै</small>}</button>)}</div>
+        <p className="meta mt">पहिलो चरणमा काठमाडौं उपत्यकाका केही टोलमा मात्र सेवा सुरु भएको छ। "छिट्टै" लेखिएका टोलमा प्रतीक्षा सूचीमा नाम लेखाउन सकिन्छ।</p>
       </section>
       <section className="pad">
         <h2 className="section-title">कति टाढासम्म देखाउने</h2>
@@ -220,6 +241,11 @@ export function Settings() {
       <div className="pad form">
         <label className="field"><span>उपनाम</span><input className="input" value={nick} onChange={(e) => setNick(e.target.value)} maxLength={16} /></label>
         <button className="btn block" disabled={nick.trim().length < 2} onClick={() => { dispatch({ type: 'ME', patch: { nickname: nick.trim() } }); showToast('प्रोफाइल सुरक्षित भयो'); }}>सुरक्षित गर्नुहोस्</button>
+        <hr className="hr" />
+        <label className="check"><input type="checkbox" checked={state.settings.lite} onChange={(e) => dispatch({ type: 'SETTINGS', patch: { lite: e.target.checked } })} />
+          <span><strong>डेटा बचत मोड</strong><br /><span className="meta">फोटो सानो आकारमा लोड हुन्छ — मोबाइल डेटा कम खर्च हुन्छ।</span></span></label>
+        <p className="meta">लगइन: {state.auth.loggedIn ? `+977 ${state.auth.phone}` : 'लगइन गरिएको छैन'}</p>
+        {state.auth.loggedIn && <button className="btn ghost block" onClick={() => { dispatch({ type: 'LOGOUT' }); showToast('लगआउट भयो'); }}>लगआउट</button>}
         <hr className="hr" />
         <button className="btn ghost block" onClick={() => { if (confirm('सबै डेटा सुरुको अवस्थामा फर्काउने?')) { dispatch({ type: 'RESET' }); showToast('डेटा रिसेट भयो'); } }}>डेमो डेटा रिसेट गर्नुहोस्</button>
         <p className="meta">यो साइटको डेटा तपाईंको ब्राउजर (localStorage) मा मात्र सुरक्षित हुन्छ।</p>

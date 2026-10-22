@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store/Store';
 import { useRouter, Link } from '../store/router';
-import { CATEGORIES, REPORT_REASONS } from '../data/mock';
-import { Img, Avatar, MannerTemp, TopBar, LikeButton, Sheet, Modal, Empty, StatusBadge } from '../components/UI';
+import { CATEGORIES, REPORT_REASONS, PRICES, HIGHLIGHT_DAYS, PREMIUM_CATEGORIES } from '../data/mock';
+import { Img, Avatar, MannerTemp, TopBar, LikeButton, Sheet, Modal, Empty, StatusBadge, Tags, Checkout, useRequireLogin, isHighlighted } from '../components/UI';
 import { IMore, IShare, IHome } from '../components/Icons';
 import { ago, priceLabel, rs, STATUS, ne } from '../utils';
 
 export default function ProductDetail({ id }) {
-  const { state, dispatch, user, showToast, likeCount, openChat, send } = useStore();
+  const { state, dispatch, user, showToast, likeCount, openChat, send, pay, report: fileReport } = useStore();
+  const requireLogin = useRequireLogin();
+  const [shareOpen, setShareOpen] = useState(false);
+  const [checkout, setCheckout] = useState(null);
   const { navigate } = useRouter();
   const p = state.products.find((x) => x.id === id);
   const [idx, setIdx] = useState(0);
@@ -29,9 +32,35 @@ export default function ProductDetail({ id }) {
   const similar = state.products.filter((x) => x.category === p.category && x.id !== p.id && x.sellerId !== p.sellerId).slice(0, 4);
   const buyers = state.chats.filter((c) => c.productId === p.id);
 
-  const share = async () => {
-    const url = window.location.href;
-    try { if (navigator.share) await navigator.share({ title: p.title, url }); else { await navigator.clipboard.writeText(url); showToast('लिङ्क कपी भयो'); } } catch {}
+  const url = typeof window !== 'undefined' ? window.location.href : '';
+  const shareText = `${p.title} — ${priceLabel(p)} | छिमेकी बजार ${url}`;
+  const shareItems = [
+    { label: 'Viber मा पठाउनुहोस्', onClick: () => window.open(`viber://forward?text=${encodeURIComponent(shareText)}`) },
+    { label: 'WhatsApp मा पठाउनुहोस्', onClick: () => window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank') },
+    { label: 'लिङ्क कपी गर्नुहोस्', onClick: async () => { try { await navigator.clipboard.writeText(url); showToast('लिङ्क कपी भयो'); } catch { showToast('कपी गर्न सकिएन'); } } },
+    ...(typeof navigator !== 'undefined' && navigator.share ? [{ label: 'अन्य एपमा सेयर', onClick: () => navigator.share({ title: p.title, url }).catch(() => {}) }] : []),
+  ];
+
+  // 끌어올리기: 하루 1회 무료, 이후 유료
+  const today = new Date().toDateString();
+  const freeBumpUsed = state.freeBumps[p.id] === today;
+  const bump = () => {
+    if (!freeBumpUsed) {
+      dispatch({ type: 'FREE_BUMP', id: p.id, day: today });
+      dispatch({ type: 'UPDATE_PRODUCT', id: p.id, patch: { bumpedAt: Date.now() } });
+      showToast('आजको निःशुल्क माथि ल्याउने सुविधा प्रयोग भयो');
+      return;
+    }
+    setCheckout({ kind: 'bump', title: 'पोस्ट माथि ल्याउने (अतिरिक्त)', amount: PRICES.bump });
+  };
+  const onPaid = (method, ref) => {
+    const c = checkout;
+    pay(c.kind, c.amount, method, ref);
+    if (c.kind === 'bump') dispatch({ type: 'UPDATE_PRODUCT', id: p.id, patch: { bumpedAt: Date.now() } });
+    if (c.kind === 'highlight') dispatch({ type: 'UPDATE_PRODUCT', id: p.id, patch: { highlightUntil: Date.now() + HIGHLIGHT_DAYS * 86400000, bumpedAt: Date.now() } });
+    if (c.kind === 'premium') dispatch({ type: 'UPDATE_PRODUCT', id: p.id, patch: { premium: true, highlightUntil: Date.now() + 7 * 86400000 } });
+    setCheckout(null);
+    showToast('भुक्तानी सफल भयो ✓');
   };
 
   const setStatus = (status) => {
@@ -40,23 +69,25 @@ export default function ProductDetail({ id }) {
     showToast(`"${STATUS[status]}" मा परिवर्तन भयो`);
   };
 
-  const chat = () => {
+  const chat = () => requireLogin(() => {
     if (!state.me.verified) { showToast('च्याट गर्न पहिले टोल प्रमाणीकरण गर्नुहोस्'); navigate('/my/region'); return; }
     navigate(`/chats/${openChat(p)}`);
-  };
+  });
 
   const sendOffer = () => {
     const n = +offerPrice;
     if (!n) return;
     const cid = openChat(p);
-    send(cid, `${rs(n)} मा दिन मिल्छ?`, { kind: 'offer', amount: n });
+    send(cid, `${rs(n)} मा दिन मिल्छ?`, { kind: 'offer', amount: n, partnerId: p.sellerId });
     setOffer(false);
     navigate(`/chats/${cid}`);
   };
 
   const myMenu = [
     { label: 'पोस्ट सम्पादन', onClick: () => navigate(`/products/${p.id}/edit`) },
-    { label: 'माथि ल्याउनुहोस्', onClick: () => { dispatch({ type: 'UPDATE_PRODUCT', id: p.id, patch: { bumpedAt: Date.now() } }); showToast('पोस्ट सूचीको माथि पुग्यो'); } },
+    { label: freeBumpUsed ? `माथि ल्याउनुहोस् (रू ${PRICES.bump})` : 'माथि ल्याउनुहोस् (आज निःशुल्क)', onClick: bump },
+    { label: isHighlighted(p) ? '⭐ विशेष पोस्ट सक्रिय छ' : `⭐ विशेष पोस्ट बनाउनुहोस् — ${HIGHLIGHT_DAYS} दिन (रू ${PRICES.highlight})`, onClick: () => !isHighlighted(p) && setCheckout({ kind: 'highlight', title: `विशेष पोस्ट (${HIGHLIGHT_DAYS} दिन)`, amount: PRICES.highlight }) },
+    ...(PREMIUM_CATEGORIES.includes(p.category) && !p.premium ? [{ label: `प्रिमियम विज्ञापन — ७ दिन माथि (रू ${PRICES.premium})`, onClick: () => setCheckout({ kind: 'premium', title: 'प्रिमियम विज्ञापन (७ दिन)', amount: PRICES.premium }) }] : []),
     { label: 'लुकाउनुहोस्', onClick: () => { dispatch({ type: 'HIDE', id: p.id }); showToast('पोस्ट लुकाइयो'); } },
     { label: 'मेटाउनुहोस्', danger: true, onClick: () => { if (confirm('यो पोस्ट मेटाउने?')) { dispatch({ type: 'DELETE_PRODUCT', id: p.id }); showToast('पोस्ट मेटाइयो'); navigate('/', { replace: true }); } } },
   ];
@@ -70,7 +101,7 @@ export default function ProductDetail({ id }) {
     <div className="page has-actionbar">
       <TopBar back transparent right={<>
         <Link to="/" className="icon-btn" aria-label="होम"><IHome /></Link>
-        <button className="icon-btn" onClick={share} aria-label="सेयर गर्नुहोस्"><IShare /></button>
+        <button className="icon-btn" onClick={() => setShareOpen(true)} aria-label="सेयर गर्नुहोस्"><IShare /></button>
         <button className="icon-btn" onClick={() => setMenu(true)} aria-label="थप"><IMore /></button>
       </>} />
 
@@ -94,8 +125,12 @@ export default function ProductDetail({ id }) {
           </select>
         )}
         <h2 className="detail-title"><StatusBadge status={p.status} />{p.title}</h2>
+        <Tags p={p} />
         <p className="meta"><Link to={`/?cat=${p.category}`} className="underline">{cat?.name}</Link> · {p.bumpedAt ? `माथि ल्याइएको ${ago(p.bumpedAt)}` : ago(p.createdAt)}</p>
         <p className="detail-desc">{p.desc}</p>
+        {p.category === 'vehicles' && (
+          <div className="warn-box">🚦 <strong>सवारी किन्नुअघि:</strong> ब्लुबुक (सवारी दर्ता प्रमाणपत्र), कर र बीमा अद्यावधिक छ कि हेर्नुहोस्। नामसारी यातायात कार्यालयमा दुवै पक्ष उपस्थित भएर मात्र गर्नुहोस्। सामान नदेखी अग्रिम भुक्तानी नगर्नुहोस्।</div>
+        )}
         {p.place && <p className="place">📍 भेट्ने ठाउँ · {p.place}</p>}
         <p className="meta">च्याट {ne(p.chatCount)} · मनपर्ने {ne(likeCount(p))} · हेरिएको {ne(p.views)}</p>
         {!mine && <button className="text-btn mt" onClick={() => setReport(true)}>यो पोस्ट रिपोर्ट गर्नुहोस्</button>}
@@ -119,7 +154,7 @@ export default function ProductDetail({ id }) {
         <div className="actionbar-price">
           <strong>{priceLabel(p)}</strong>
           {!mine && !p.nanum && (p.offerable
-            ? <button className="text-btn strong" onClick={() => setOffer(true)}>मूल्य प्रस्ताव गर्नुहोस्</button>
+            ? <button className="text-btn strong" onClick={() => requireLogin(() => setOffer(true))}>मूल्य प्रस्ताव गर्नुहोस्</button>
             : <span className="meta">मूल्य मोलमोलाइ हुँदैन</span>)}
         </div>
         {mine
@@ -128,6 +163,8 @@ export default function ProductDetail({ id }) {
       </div>
 
       <Sheet open={menu} onClose={() => setMenu(false)} items={mine ? myMenu : otherMenu} />
+      <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="छिमेकीलाई सेयर गर्नुहोस्" items={shareItems} />
+      <Checkout open={!!checkout} onClose={() => setCheckout(null)} title={checkout?.title} amount={checkout?.amount} onPaid={onPaid} />
 
       <Modal open={offer} onClose={() => setOffer(false)} title="मूल्य प्रस्ताव">
         <p className="meta">बिक्री मूल्य {rs(p.price)}</p>
@@ -153,7 +190,7 @@ export default function ProductDetail({ id }) {
       <Modal open={report} onClose={() => setReport(false)} title="रिपोर्टको कारण छान्नुहोस्">
         <div className="pick-list">
           {REPORT_REASONS.map((r) => (
-            <button key={r} className="pick" onClick={() => { setReport(false); dispatch({ type: 'HIDE', id: p.id }); showToast('रिपोर्ट प्राप्त भयो। जाँच गरेर कारबाही गरिनेछ'); }}>{r}</button>
+            <button key={r} className="pick" onClick={() => { setReport(false); fileReport('product', p.id, r); dispatch({ type: 'HIDE', id: p.id }); showToast('रिपोर्ट प्राप्त भयो। जाँच गरेर कारबाही गरिनेछ'); }}>{r}</button>
           ))}
         </div>
       </Modal>

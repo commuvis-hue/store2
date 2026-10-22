@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../store/Store';
 import { useRouter, Link } from '../store/router';
-import { CATEGORIES } from '../data/mock';
-import { ProductCard, Fab, Empty, Sheet } from '../components/UI';
+import { CATEGORIES, AD_SLOTS, STORES, REGION_INFO } from '../data/mock';
+import { ProductCard, Fab, Empty, Sheet, AdCard, isHighlighted } from '../components/UI';
 import { ISearch, IBell, IDown, IMenu } from '../components/Icons';
 import { ne } from '../utils';
 
@@ -10,6 +10,7 @@ export default function Home() {
   const { state, dispatch, showToast } = useStore();
   const { query, navigate } = useRouter();
   const cat = query.get('cat');
+  const abroad = query.get('tag') === 'abroad';
   const [hideSold, setHideSold] = useState(false);
   const [regionSheet, setRegionSheet] = useState(false);
   const unreadNoti = state.notifications.filter((n) => !n.read).length;
@@ -17,9 +18,23 @@ export default function Home() {
   const list = useMemo(() => state.products
     .filter((p) => !state.hidden.includes(p.id) && !state.blocked.includes(p.sellerId))
     .filter((p) => !cat || p.category === cat)
+    .filter((p) => !abroad || p.abroad)
     .filter((p) => !hideSold || p.status !== 'sold')
-    .sort((a, b) => (b.bumpedAt || b.createdAt) - (a.bumpedAt || a.createdAt)),
-  [state.products, state.hidden, state.blocked, cat, hideSold]);
+    // 유료 'विशेष' 게시물은 노출 기간 동안 위로
+    .sort((a, b) => (Number(isHighlighted(b)) - Number(isHighlighted(a))) || ((b.bumpedAt || b.createdAt) - (a.bumpedAt || a.createdAt))),
+  [state.products, state.hidden, state.blocked, cat, abroad, hideSold]);
+
+  // 상품 6개마다 동네가게 광고 1개 (내가 집행 중인 광고 우선)
+  const ads = [...state.myAds.filter((a) => a.active).map((a) => ({ id: a.id, storeId: 'mine', headline: a.headline, mine: a })), ...AD_SLOTS];
+  const storeOf = (ad) => (ad.storeId === 'mine'
+    ? { id: 'mine', name: state.business.shopName || 'मेरो पसल', region: state.me.region, distance: 'नजिकै', image: STORES[0].image }
+    : STORES.find((x) => x.id === ad.storeId));
+  const feed = [];
+  list.forEach((p, i) => {
+    feed.push(<ProductCard key={p.id} p={p} />);
+    if ((i + 1) % 6 === 0 && ads.length) { const ad = ads[((i + 1) / 6 - 1) % ads.length]; feed.push(<AdCard key={`ad-${i}`} ad={ad} store={storeOf(ad)} />); }
+  });
+  const regionOpen = REGION_INFO[state.me.region]?.open !== false;
 
   const catName = CATEGORIES.find((c) => c.id === cat)?.name;
 
@@ -34,7 +49,17 @@ export default function Home() {
         </div>
       </header>
 
-      {!cat && (
+      {!regionOpen && (
+        <div className="notice">
+          <strong>{state.me.region} मा छिट्टै आउँदैछ</strong>
+          <span className="meta">अहिले काठमाडौं उपत्यकाका केही टोलमा मात्र सेवा छ। सूचना पाउन प्रतीक्षा सूचीमा नाम लेखाउनुहोस्।</span>
+          <button className="btn sm" onClick={() => { dispatch({ type: 'WAITLIST', region: state.me.region }); showToast('प्रतीक्षा सूचीमा थपियो'); }} disabled={state.waitlist.includes(state.me.region)}>
+            {state.waitlist.includes(state.me.region) ? 'सूचीमा छ ✓' : 'प्रतीक्षा सूचीमा थप्नुहोस्'}
+          </button>
+        </div>
+      )}
+
+      {!cat && !abroad && (
         <Link to="/?cat=fashion" className="festival">
           <span className="festival-art" aria-hidden="true">🪔</span>
           <span><strong>दशैं–तिहार किनमेल</strong><br /><span className="meta">छिमेकीले बेच्दै गरेका साडी, सल र उपहार हेर्नुहोस्</span></span>
@@ -42,20 +67,21 @@ export default function Home() {
       )}
 
       <div className="chips" role="toolbar" aria-label="वर्ग छान्नुहोस्">
-        <button className={`chip ${!cat ? 'is-on' : ''}`} onClick={() => navigate('/')}>सबै</button>
+        <button className={`chip ${!cat && !abroad ? 'is-on' : ''}`} onClick={() => navigate('/')}>सबै</button>
+        <button className={`chip ${abroad ? 'is-on' : ''}`} onClick={() => navigate('/?tag=abroad')}>✈️ विदेश जाँदै सेल</button>
         {CATEGORIES.map((c) => (
           <button key={c.id} className={`chip ${cat === c.id ? 'is-on' : ''}`} onClick={() => navigate(`/?cat=${c.id}`)}>{c.icon} {c.name}</button>
         ))}
       </div>
 
       <div className="list-tools">
-        <span className="meta">{catName ? `${catName} · ` : ''}{ne(list.length)} वटा सामान</span>
+        <span className="meta">{catName ? `${catName} · ` : abroad ? 'विदेश जाँदै सेल · ' : ''}{ne(list.length)} वटा सामान</span>
         <label className="check"><input type="checkbox" checked={hideSold} onChange={(e) => setHideSold(e.target.checked)} />उपलब्ध मात्र</label>
       </div>
 
       {list.length === 0
         ? <Empty title="यस वर्गमा अहिले कुनै सामान छैन" desc="पहिलो सामान तपाईं नै राख्नुहोस्।" />
-        : <div className="plist">{list.map((p) => <ProductCard key={p.id} p={p} />)}</div>}
+        : <div className="plist">{feed}</div>}
 
       <Fab to="/write" />
 

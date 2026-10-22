@@ -3,15 +3,22 @@ import { useRouter, Link } from '../store/router';
 import { useStore } from '../store/Store';
 import { tempColor, tempFace, priceLabel, ago, STATUS, ne } from '../utils';
 import { IBack, IHeart, IChat, IHome, ICommunity, IMap, IUser, IPlus } from './Icons';
+import { PAY_METHODS } from '../data/mock';
 
 const placeholder = () =>
   'data:image/svg+xml;utf8,' + encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><rect width="300" height="300" fill="#F1ECE6"/><path d="M60 210l55-70 35 40 30-30 60 60z" fill="#D9CFC4"/><circle cx="200" cy="105" r="16" fill="#D9CFC4"/></svg>');
 
 // वास्तविक फोटो लोडर: मुख्य फोटो → सोही प्रकारको अर्को फोटो → picsum → प्लेसहोल्डर
+// 데이터 절약 모드: 사진을 저해상도(320px)로 요청
+const liteUrl = (url) => (typeof url === 'string' && url.includes('unsplash.com') ? url.replace(/w=\d+/, 'w=320').replace('q=75', 'q=50') : url);
+
 export function Img({ src, fallback, alt = '', seed, className, ...rest }) {
   const [stage, setStage] = useState(0);
-  const sources = [src, fallback, `https://picsum.photos/seed/${encodeURIComponent(seed || 'x')}/800/800`, placeholder()].filter(Boolean);
+  const store = useStore();
+  const lite = store?.state.settings?.lite;
+  const size = lite ? 320 : 800;
+  const sources = [src, fallback, `https://picsum.photos/seed/${encodeURIComponent(seed || 'x')}/${size}/${size}`, placeholder()].filter(Boolean).map((x) => (lite ? liteUrl(x) : x));
   return <img src={sources[Math.min(stage, sources.length - 1)]} alt={alt} loading="lazy" className={className}
     onError={() => setStage((s) => Math.min(s + 1, sources.length - 1))} {...rest} />;
 }
@@ -51,14 +58,30 @@ export function StatusBadge({ status }) {
   return <span className={`badge badge-${status}`}>{STATUS[status]}</span>;
 }
 
+export const isHighlighted = (p) => Boolean(p.highlightUntil && p.highlightUntil > Date.now());
+
+export function Tags({ p }) {
+  const { user } = useStore();
+  const seller = user(p.sellerId);
+  return (
+    <span className="tags">
+      {isHighlighted(p) && <span className="tag-mini tag-hl">⭐ विशेष</span>}
+      {p.premium && <span className="tag-mini tag-premium">प्रिमियम</span>}
+      {p.abroad && <span className="tag-mini tag-abroad">✈️ विदेश जाँदै</span>}
+      {seller?.business && <span className="tag-mini tag-biz">व्यापारी</span>}
+    </span>
+  );
+}
+
 export function ProductCard({ p }) {
   const { likeCount } = useStore();
   const likes = likeCount(p);
   return (
-    <Link to={`/products/${p.id}`} className={`pcard ${p.status === 'sold' ? 'is-sold' : ''}`}>
+    <Link to={`/products/${p.id}`} className={`pcard ${p.status === 'sold' ? 'is-sold' : ''} ${isHighlighted(p) ? 'is-hl' : ''}`}>
       <div className="pcard-img"><Img src={p.images[0]} fallback={p.fb} alt={p.title} seed={p.id} /></div>
       <div className="pcard-body">
         <h3 className="pcard-title">{p.title}</h3>
+        <Tags p={p} />
         <p className="meta">{p.region} · {p.bumpedAt ? `माथि ल्याइएको ${ago(p.bumpedAt)}` : ago(p.createdAt)}</p>
         <p className="pcard-price"><StatusBadge status={p.status} />{priceLabel(p)}</p>
         <div className="pcard-counts">
@@ -146,4 +169,56 @@ export function LikeButton({ id }) {
       <IHeart filled={on} size={26} />
     </button>
   );
+}
+
+// ───────── v2 ─────────
+
+// 피드 안 동네가게 광고
+export function AdCard({ ad, store }) {
+  return (
+    <Link to={`/stores/${store.id}`} className="adcard">
+      <div className="pcard-img"><Img src={store.image} alt={store.name} seed={store.id} /></div>
+      <div className="pcard-body">
+        <span className="ad-label">प्रायोजित · छिमेकी पसल</span>
+        <h3 className="pcard-title">{ad.headline}</h3>
+        <p className="meta">{store.name} · {store.region} · {store.distance}</p>
+        <span className="coupon">🎟️ कुपन हेर्नुहोस्</span>
+      </div>
+    </Link>
+  );
+}
+
+// 결제창 (데모). 실서비스에서는 eSewa/Khalti/Fonepay 게이트웨이로 교체
+export function Checkout({ open, onClose, title, amount, onPaid }) {
+  const [method, setMethod] = useState('esewa');
+  const [busy, setBusy] = useState(false);
+  if (!open) return null;
+  const go = () => {
+    setBusy(true);
+    setTimeout(() => { setBusy(false); onPaid(method, `TXN${Date.now().toString(36).toUpperCase()}`); }, 1200);
+  };
+  return (
+    <Modal open={open} onClose={busy ? () => {} : onClose} title="भुक्तानी">
+      <div className="pay-summary"><span>{title}</span><strong>रू {Number(amount).toLocaleString('en-IN')}</strong></div>
+      <div className="pay-methods" role="radiogroup" aria-label="भुक्तानी माध्यम">
+        {PAY_METHODS.map((m) => (
+          <button key={m.id} role="radio" aria-checked={method === m.id} className={`pay-method ${method === m.id ? 'is-on' : ''}`} onClick={() => setMethod(m.id)}>
+            <span className="pay-dot" style={{ background: m.color }} />{m.name}
+          </button>
+        ))}
+      </div>
+      <p className="meta mt">डेमो भुक्तानी हो — वास्तविक पैसा काटिँदैन।</p>
+      <button className="btn block mt" onClick={go} disabled={busy}>{busy ? 'प्रक्रियामा…' : `रू ${Number(amount).toLocaleString('en-IN')} तिर्नुहोस्`}</button>
+    </Modal>
+  );
+}
+
+// 로그인이 필요한 동작 앞에 사용
+export function useRequireLogin() {
+  const { state, showToast } = useStore();
+  const { navigate, pathname } = useRouter();
+  return (fn) => {
+    if (!state.auth.loggedIn) { showToast('पहिले मोबाइल नम्बरबाट लगइन गर्नुहोस्'); navigate(`/login?next=${encodeURIComponent(pathname)}`); return; }
+    fn();
+  };
 }

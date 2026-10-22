@@ -8,6 +8,10 @@ import Write from './pages/Write';
 import Community, { PostDetail, CommunityWrite } from './pages/Community';
 import Nearby from './pages/Nearby';
 import Chats, { ChatRoom } from './pages/Chats';
+import Login from './pages/Auth';
+import { StorePage, BusinessCenter } from './pages/Business';
+import Admin from './pages/Admin';
+import { LegalDoc, Help } from './pages/Legal';
 import My, { MySales, MyPurchases, MyLikes, Keywords, RegionSettings, Reviews, UserProfile, WriteReview, Settings, Blocked, Notifications } from './pages/My';
 
 const ROUTES = [
@@ -35,6 +39,12 @@ const ROUTES = [
   ['/users/:id', ({ id }) => <UserProfile key={id} id={id} />],
   ['/review/:userId', ({ userId }) => <WriteReview userId={userId} />],
   ['/notifications', () => <Notifications />],
+  ['/login', () => <Login />],
+  ['/stores/:id', ({ id }) => <StorePage key={id} id={id} />],
+  ['/business', () => <BusinessCenter />],
+  ['/admin', () => <Admin />],
+  ['/help', () => <Help />],
+  ['/legal/:kind', ({ kind }) => <LegalDoc key={kind} kind={kind} />],
 ];
 
 export default function App() {

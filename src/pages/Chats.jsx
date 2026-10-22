@@ -41,7 +41,7 @@ export default function Chats() {
 }
 
 export function ChatRoom({ id }) {
-  const { state, dispatch, user, send, showToast } = useStore();
+  const { state, dispatch, user, send, showToast, report: fileReport } = useStore();
   const { navigate } = useRouter();
   const [text, setText] = useState('');
   const [menu, setMenu] = useState(false);
@@ -123,7 +123,7 @@ export function ChatRoom({ id }) {
       <Sheet open={menu} onClose={() => setMenu(false)} items={[
         { label: `${u.nickname} को प्रोफाइल`, onClick: () => navigate(`/users/${u.id}`) },
         { label: blocked ? 'अनब्लक गर्नुहोस्' : 'ब्लक गर्नुहोस्', danger: !blocked, onClick: () => { dispatch({ type: blocked ? 'UNBLOCK' : 'BLOCK', userId: u.id }); showToast(blocked ? 'अनब्लक गरियो' : 'ब्लक गरियो'); } },
-        { label: 'रिपोर्ट गर्नुहोस्', danger: true, onClick: () => showToast('रिपोर्ट प्राप्त भयो') },
+        { label: 'रिपोर्ट गर्नुहोस्', danger: true, onClick: () => { fileReport('user', u.id, 'च्याटबाट रिपोर्ट'); showToast('रिपोर्ट प्राप्त भयो'); } },
         { label: 'च्याटबाट बाहिरिनुहोस्', danger: true, onClick: () => { if (confirm('बाहिरिँदा सबै सन्देश मेटिनेछन्।')) { dispatch({ type: 'LEAVE_CHAT', id }); navigate('/chats', { replace: true }); } } },
       ]} />
 
