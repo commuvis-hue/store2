@@ -386,3 +386,9 @@ input, select, textarea { font: inherit; color: inherit; }
 .faq { border-bottom: 1px solid var(--line); padding: 12px 0; }
 .faq summary { cursor: pointer; font-weight: 600; }
 .faq p { margin-top: 6px; color: var(--sub); }
+
+/* ───────── v3: language toggle ───────── */
+.lang-chip { min-width: 40px; height: 32px; padding: 0 10px; border-radius: 16px; border: 1px solid var(--line); font-size: 13px; font-weight: 700; color: var(--ink); background: var(--bg); }
+.lang-chip:hover { background: var(--surface); }
+.topbar.is-clear .lang-chip { color: #fff; border-color: rgba(255,255,255,.6); background: transparent; }
+.lang-seg button { font-weight: 600; }

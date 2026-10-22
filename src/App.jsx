@@ -1,4 +1,6 @@
 import { useRouter, matchRoute } from './store/router';
+import { useStore } from './store/Store';
+import { setLang } from './i18n';
 import { BottomNav, Toast } from './components/UI';
 import Home from './pages/Home';
 import Categories from './pages/Categories';
@@ -49,6 +51,8 @@ const ROUTES = [
 
 export default function App() {
   const { pathname } = useRouter();
+  const { state } = useStore();
+  setLang(state.settings.lang); // 렌더 전에 언어 적용 (기본: 네팔어)
   let page = null; let nav = false;
   for (const [pattern, render, withNav] of ROUTES) {
     const params = matchRoute(pattern, pathname);

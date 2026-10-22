@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { createContext, useContext, useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import { USERS, PRODUCTS, POSTS, INITIAL_CHATS, INITIAL_NOTIFICATIONS, AUTO_REPLIES, OFFER_REPLIES } from '../data/mock';
 
@@ -23,7 +24,7 @@ const initial = () => ({
   recentSearches: [],
   // v2 (사업기획서 반영)
   auth: { loggedIn: false, phone: '' },
-  settings: { lite: false },
+  settings: { lite: false, lang: 'ne' },
   business: { active: false, shopName: '', since: null },
   payments: [],
   reports: [],
@@ -36,7 +37,7 @@ const initial = () => ({
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...initial(), ...JSON.parse(raw) };
+    if (raw) { const saved = JSON.parse(raw); const base = initial(); return { ...base, ...saved, settings: { ...base.settings, ...(saved.settings || {}) } }; }
   } catch {}
   return initial();
 }
@@ -124,7 +125,8 @@ export function StoreProvider({ children }) {
 
   const api = {
     state, dispatch, toast, showToast, uid,
-    user: (id) => (id === 'me' ? { ...state.users.me, ...state.me } : state.users[id]),
+    // 표시용 사용자: 영어 모드에서는 데모 닉네임을 로마자로
+    user: (id) => { const u = id === 'me' ? { ...state.users.me, ...state.me } : state.users[id]; return u && { ...u, nickname: t(u.nickname) }; },
     isLiked: (id) => state.likes.includes(id),
     likeCount: (p) => p.baseLikes + (state.likes.includes(p.id) ? 1 : 0),
 
@@ -143,7 +145,7 @@ export function StoreProvider({ children }) {
       const product = { id: uid('p'), sellerId: 'me', region: state.me.region, createdAt: Date.now(), status: 'selling', views: 0, baseLikes: 0, chatCount: 0, ...data };
       dispatch({ type: 'ADD_PRODUCT', product });
       state.keywords.filter((k) => product.title.includes(k)).forEach((k) =>
-        dispatch({ type: 'NOTIFY', n: { type: 'keyword', text: `किवर्ड "${k}" सम्बन्धी नयाँ पोस्ट: ${product.title}`, link: `/products/${product.id}` } }));
+        dispatch({ type: 'NOTIFY', n: { type: 'keyword', text: 'किवर्ड "{k}" सम्बन्धी नयाँ पोस्ट: {title}', vars: { k, title: product.title }, link: `/products/${product.id}` } }));
       return product;
     },
 
